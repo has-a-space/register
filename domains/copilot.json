@@ -3,7 +3,6 @@
         "username": "MaseDev33"
     },
     "records": {
-        "A": ["192.0.2.1"],
-        "TXT": "has-a-space-copilot-purge-test-20261117"
+        "CNAME": "example.com"
     }
 }
