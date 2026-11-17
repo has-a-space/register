@@ -62,7 +62,12 @@ function getDomainsList(filesPath) {
 // ---------------------------------------------------------------------------
 
 var domains = getDomainsList('../domains');
-var records = [];
+var records = [
+  A("@", IP("185.199.108.153")),
+  A("@", IP("185.199.109.153")),
+  A("@", IP("185.199.110.153")),
+  A("@", IP("185.199.111.153"))
+];
 
 for (var idx in domains) {
   var name = domains[idx].name;
