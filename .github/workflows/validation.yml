@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
     dns:
-        name: DNS
+        name: DNS Configuration
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4

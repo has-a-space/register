@@ -156,12 +156,4 @@ for (var idx in domains) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// commit
-//
-// NO_PURGE: DNSControl adds and updates records, but never deletes.
-// Removing a domains/*.json will NOT remove the DNS record - do that by hand
-// in the Cloudflare dashboard.
-// ---------------------------------------------------------------------------
-
-D(rootDomain, regNone, providerCf, NO_PURGE, records);
+D(rootDomain, regNone, providerCf, PURGE, records);

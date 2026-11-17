@@ -56,6 +56,9 @@ Please follow our ToS, which can be found [here](https://has-a.space/terms)
 5. After the pull request is merged, the DNS records should propagate within the next 15-20 minutes, however in rarer cases, it can sometimes takes between 24-48 hours.
 6. That's all, enjoy your `has-a.space` subdomain!
 
+> [!WARNING]
+> DNSControl manages the entire `has-a.space` zone from the files in `domains/`. When a change is merged, DNS records are reconciled to match those files; records not represented there are removed. Keep all records that should remain in the configuration.
+
 > [!NOTE]
 > If your DNS has not propagated within 48 hours, please check with a [DNS Checker](https://dnschecker.org/all-dns-records-of-domain.php) before contacting us, so we can get you the best support.
 
