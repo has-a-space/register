@@ -59,7 +59,8 @@ jobs:
 
                   template=$(gh api "repos/$REPOSITORY/contents/.github/PULL_REQUEST_TEMPLATE?ref=$PR_BASE_SHA" --jq .content | base64 --decode)
                   body=$(gh api "repos/$REPOSITORY/pulls/$PR" --jq '.body // ""')
-                  mapfile -t items < <(sed -nE 's/^[[:space:]]*-[[:space:]]+\[[ xX]\][[:space:]]+(.+)$/\1/p' <<< "$template")
+                  body=$(sed 's/[[:space:]]*$//' <<< "$body")
+                  mapfile -t items < <(sed -nE 's/^[[:space:]]*-[[:space:]]+\[[ xX]\][[:space:]]+(.+)$/\1/p' <<< "$template" | sed 's/[[:space:]]*$//')
 
                   if [[ ${#items[@]} -eq 0 ]]; then
                       echo "::error::The base branch pull request template has no checklist items."
