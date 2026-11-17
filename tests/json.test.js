@@ -7,16 +7,11 @@ import reservedDomains from "../json/reserved.json" with { type: "json" };
 const ignoredRootJSONFiles = ["package-lock.json", "package.json"];
 
 const requiredFields = {
-    owner: "object",
     records: "object"
 };
 
 const optionalFields = {
     proxied: "boolean"
-};
-
-const requiredOwnerFields = {
-    username: "string"
 };
 
 const optionalOwnerFields = {
@@ -35,6 +30,14 @@ const hostnameRegex = /^(?=.{1,253}$)(?:(?:[_a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-z
 
 const domainsPath = path.resolve("domains");
 const files = fs.readdirSync(domainsPath);
+
+function ownerCheckBypassed() {
+    try {
+        return JSON.parse(process.env.PR_LABELS ?? "[]").includes("ci: bypass-owner-check");
+    } catch (error) {
+        throw new Error(`Failed to parse PR_LABELS: ${error.message}`);
+    }
+}
 
 function findDuplicateKeys(jsonString) {
     const duplicateKeys = new Set();
@@ -85,7 +88,7 @@ async function validateFields(t, obj, fields, file, prefix = "") {
 
         if (obj.hasOwnProperty(key)) {
             t.is(typeof obj[key], fields[key], `${file}: Field ${fieldPath} should be of type ${fields[key]}`);
-        } else if (fields === requiredFields || fields === requiredOwnerFields) {
+        } else if (fields === requiredFields) {
             t.true(false, `${file}: Missing required field: ${fieldPath}`);
         }
     }
@@ -125,11 +128,12 @@ async function processFile(file, t) {
 
     // Validate fields
     validateFields(t, data, requiredFields, file);
-    validateFields(t, data.owner, requiredOwnerFields, file, "owner");
-    validateFields(t, data.owner, optionalOwnerFields, file, "owner");
+    if (data.owner && typeof data.owner === "object" && !Array.isArray(data.owner)) {
+        validateFields(t, data.owner, optionalOwnerFields, file, "owner");
+    }
     validateFields(t, data, optionalFields, file);
 
-    if (data.owner.email) {
+    if (data.owner?.email) {
         t.regex(data.owner.email, emailRegex, `${file}: Owner email should be a valid email address`);
         t.false(
             data.owner.email.endsWith("@users.noreply.github.com"),
@@ -159,6 +163,28 @@ t("All files should be valid JSON", async (t) => {
     await Promise.all(
         files.map((file) => {
             return t.notThrows(() => fs.readJson(path.join(domainsPath, file)), `${file}: Invalid JSON file`);
+        })
+    );
+});
+
+t("All domain files should have an owner username", async (t) => {
+    if (ownerCheckBypassed()) {
+        t.pass("Owner check bypassed by label.");
+        return;
+    }
+
+    await Promise.all(
+        files.map(async (file) => {
+            const data = await fs.readJson(path.join(domainsPath, file));
+            const owner = data.owner;
+            t.true(
+                owner !== null && typeof owner === "object" && !Array.isArray(owner),
+                `${file}: Missing or invalid owner object`
+            );
+            t.true(
+                typeof owner?.username === "string" && owner.username.trim().length > 0,
+                `${file}: Missing owner.username`
+            );
         })
     );
 });

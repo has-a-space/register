@@ -10,6 +10,7 @@ on:
             - "tests/*"
             - "json/*"
             - ".github/workflows/ci.yml"
+            - ".github/PULL_REQUEST_TEMPLATE"
             - "package.json"
             - "package-lock.json"
 
@@ -39,9 +40,38 @@ jobs:
               run: |
                   echo "PR_AUTHOR=${{ github.event.pull_request.user.login }}" >> "$GITHUB_ENV"
                   echo "PR_AUTHOR_ID=${{ github.event.pull_request.user.id }}" >> "$GITHUB_ENV"
+                  echo "PR_BASE_SHA=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
                   echo "PR_LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels --jq '[.labels[].name]')" >> "$GITHUB_ENV"
                   echo "CHANGED_FILES=$(gh api --jq '[.[] | select(.status != "removed") | .filename]' "repos/${{ github.repository }}/pulls/$PR/files")" >> "$GITHUB_ENV"
                   echo "DELETED_FILES=$(gh api --jq '[.[] | select(.status == "removed") | {name: .filename, data: .patch}]' "repos/${{ github.repository }}/pulls/$PR/files")" >> "$GITHUB_ENV"
+
+            - name: Check pull request template
+              if: github.event_name == 'pull_request'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  PR: ${{ github.event.pull_request.number }}
+                  REPOSITORY: ${{ github.repository }}
+              run: |
+                  if jq -e 'index("ci: bypass-template-check") != null' <<< "$PR_LABELS" >/dev/null; then
+                      echo "Template check bypassed by label."
+                      exit 0
+                  fi
+
+                  template=$(gh api "repos/$REPOSITORY/contents/.github/PULL_REQUEST_TEMPLATE?ref=$PR_BASE_SHA" --jq .content | base64 --decode)
+                  body=$(gh api "repos/$REPOSITORY/pulls/$PR" --jq '.body // ""')
+                  mapfile -t items < <(sed -nE 's/^[[:space:]]*-[[:space:]]+\[[ xX]\][[:space:]]+(.+)$/\1/p' <<< "$template")
+
+                  if [[ ${#items[@]} -eq 0 ]]; then
+                      echo "::error::The base branch pull request template has no checklist items."
+                      exit 1
+                  fi
+
+                  for item in "${items[@]}"; do
+                      if ! grep -Fqx -- "- [x] $item" <<< "$body" && ! grep -Fqx -- "- [X] $item" <<< "$body"; then
+                          echo "::error::Complete the pull request checklist item: $item"
+                          exit 1
+                      fi
+                  done
 
             - name: Run tests
               run: npx ava tests/*.test.js --timeout=1m
