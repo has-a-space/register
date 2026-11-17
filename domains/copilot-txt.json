@@ -3,6 +3,9 @@
         "username": "MaseDev33"
     },
     "records": {
+        "A": [
+            "192.0.2.1"
+        ],
         "TXT": "copilot-dns-change-test-20261117"
     }
 }
