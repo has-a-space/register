@@ -111,7 +111,11 @@ async function validateFileName(t, file) {
     t.true(!reservedDomains.some((r) => subdomain.endsWith(`.${r}`)), `${file}: Subdomain name is reserved`);
 
     const rootSubdomain = subdomain.split(".").pop();
-    t.false(rootSubdomain.startsWith("_"), `${file}: Root subdomains should not start with an underscore`);
+    const isGithubPagesChallenge = /^_github-pages-challenge-[a-z0-9-]+$/.test(rootSubdomain);
+    t.false(
+        rootSubdomain.startsWith("_") && !isGithubPagesChallenge,
+        `${file}: Root subdomains should not start with an underscore`
+    );
     t.false(rootSubdomain.includes("has-a-space"), `${file}: Root subdomains should not contain has-a-space`);
 }
 
@@ -120,6 +124,13 @@ async function processFile(file, t) {
     const data = await fs.readJson(filePath);
 
     validateFileName(t, file);
+    const rootSubdomain = file.replace(/\.json$/, "").split(".").pop();
+    if (rootSubdomain.startsWith("_github-pages-challenge-")) {
+        t.true(
+            Object.keys(data.records).length === 1 && typeof data.records.TXT === "string",
+            `${file}: GitHub Pages challenge records must contain only a TXT record`
+        );
+    }
 
     // Check for duplicate keys
     const rawData = await fs.readFile(filePath, "utf8");
